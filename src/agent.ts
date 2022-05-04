@@ -29,9 +29,7 @@ export const provideHandleTransaction = (
     const swapEvents = txEvent.filterLog(SWAP_EVENT);
 
     if (!swapEvents.length) return findings;
-
     const provider = new ethers.providers.JsonRpcProvider(getJsonRpcUrl());
-
     const factoryContract = new ethers.Contract(
       FACTORY_CONTRACT_ADDRESS,
       V3_FACTORY_ABI,
@@ -74,7 +72,7 @@ export const provideHandleTransaction = (
               metadata: {
                 token0,
                 token1,
-                fee,
+                fee: fee.toString(),
               },
             })
           );
