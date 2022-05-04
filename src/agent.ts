@@ -24,6 +24,33 @@ interface SwapInfo {
 }
 const poolCache: Record<string, SwapInfo> = {};
 
+function getCreate2Address(
+  factoryAddress: string,
+  [tokenA, tokenB]: [string, string],
+  fee: number,
+  bytecode: string
+): string {
+  const [token0, token1] =
+    tokenA.toLowerCase() < tokenB.toLowerCase()
+      ? [tokenA, tokenB]
+      : [tokenB, tokenA];
+  const constructorArgumentsEncoded = ethers.utils.defaultAbiCoder.encode(
+    ["address", "address", "uint24"],
+    [token0, token1, fee]
+  );
+  const create2Inputs = [
+    "0xff",
+    factoryAddress,
+    // salt
+    ethers.utils.keccak256(constructorArgumentsEncoded),
+    // init code. bytecode + constructor arguments
+    ethers.utils.keccak256(bytecode),
+  ];
+  const sanitizedInputs = `0x${create2Inputs.map((i) => i.slice(2)).join("")}`;
+  return ethers.utils.getAddress(
+    `0x${ethers.utils.keccak256(sanitizedInputs).slice(-40)}`
+  );
+}
 export const provideHandleTransaction = (
   FACTORY_CONTRACT_ADDRESS: string
 ): HandleTransaction => {
@@ -77,14 +104,15 @@ export const provideHandleTransaction = (
             poolContract.token1(),
             poolContract.fee(),
           ]);
-
-          // If this address is a Uniswap Pool then it shall be available on getPool() query
-          const poolAddress = await factoryContract.getPool(
-            token0,
-            token1,
-            fee
+          const bytecode = await provider.getCode(address);
+          const computedAddress = getCreate2Address(
+            FACTORY_CONTRACT_ADDRESS,
+            [token0, token1],
+            fee,
+            bytecode
           );
-          if (poolAddress.toLowerCase() === address.toLowerCase()) {
+
+          if (computedAddress === address) {
             poolCache[address] = {
               token0,
               token1,
@@ -106,7 +134,7 @@ export const provideHandleTransaction = (
             );
           }
         } catch (error) {
-          //ignore
+          // Ignore
         }
       })
     );
