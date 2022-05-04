@@ -9,14 +9,15 @@ import {
 } from "forta-agent";
 
 import { abi as IUniswapV3PoolABI } from "@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json";
-import { abi as V3_FACTORY_ABI } from "@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json";
 
 export const SWAP_EVENT =
   "event Swap( address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick )";
 
 export const FACTORY_CONTRACT_ADDRESS =
-  "0x1F98431c8aD98523631AE4a59f267346ea31F984";
+  "0x1f98431c8ad98523631ae4a59f267346ea31f984";
 
+const BYTE_CODE_HASHED_POOL_CONTRACT =
+  "0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54";
 interface SwapInfo {
   token0: string;
   token1: string;
@@ -44,7 +45,7 @@ function getCreate2Address(
     // salt
     ethers.utils.keccak256(constructorArgumentsEncoded),
     // init code. bytecode + constructor arguments
-    ethers.utils.keccak256(bytecode),
+    bytecode,
   ];
   const sanitizedInputs = `0x${create2Inputs.map((i) => i.slice(2)).join("")}`;
   return ethers.utils.getAddress(
@@ -64,11 +65,6 @@ export const provideHandleTransaction = (
 
     if (!swapEvents.length) return findings;
     const provider = new ethers.providers.JsonRpcProvider(getJsonRpcUrl());
-    const factoryContract = new ethers.Contract(
-      FACTORY_CONTRACT_ADDRESS,
-      V3_FACTORY_ABI,
-      provider
-    );
 
     await Promise.all(
       swapEvents.map(async (swapEvent) => {
@@ -104,15 +100,15 @@ export const provideHandleTransaction = (
             poolContract.token1(),
             poolContract.fee(),
           ]);
-          const bytecode = await provider.getCode(address);
+
           const computedAddress = getCreate2Address(
             FACTORY_CONTRACT_ADDRESS,
             [token0, token1],
             fee,
-            bytecode
+            BYTE_CODE_HASHED_POOL_CONTRACT
           );
 
-          if (computedAddress === address) {
+          if (computedAddress.toLowerCase() === address) {
             poolCache[address] = {
               token0,
               token1,
@@ -134,7 +130,7 @@ export const provideHandleTransaction = (
             );
           }
         } catch (error) {
-          // Ignore
+          //ignore
         }
       })
     );

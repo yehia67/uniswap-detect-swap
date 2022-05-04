@@ -13,7 +13,7 @@ import agent, {
 
 jest.setTimeout(10000);
 
-describe("Nethermind deployer deploy a new bot", () => {
+describe("Nethermind bot detect all swaps", () => {
   let handleTransaction: HandleTransaction;
   beforeAll(() => {
     handleTransaction = agent.handleTransaction;
