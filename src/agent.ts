@@ -17,6 +17,13 @@ export const SWAP_EVENT =
 export const FACTORY_CONTRACT_ADDRESS =
   "0x1F98431c8aD98523631AE4a59f267346ea31F984";
 
+interface SwapInfo {
+  token0: string;
+  token1: string;
+  fee: string;
+}
+const poolCache: Record<string, SwapInfo> = {};
+
 export const provideHandleTransaction = (
   FACTORY_CONTRACT_ADDRESS: string
 ): HandleTransaction => {
@@ -39,6 +46,25 @@ export const provideHandleTransaction = (
     await Promise.all(
       swapEvents.map(async (swapEvent) => {
         const { address } = swapEvent;
+
+        if (poolCache[address]) {
+          findings.push(
+            Finding.fromObject({
+              name: "Uniswap detected a swap transaction",
+              description: `Uniswap detected a swap transaction between ${poolCache[address].token0} and ${poolCache[address].token1}`,
+              alertId: "SWAP-0",
+              type: FindingType.Info,
+              severity: FindingSeverity.Info,
+              metadata: {
+                token0: poolCache[address].token0,
+                token1: poolCache[address].token1,
+                fee: poolCache[address].fee,
+              },
+            })
+          );
+          return;
+        }
+
         const poolContract = new ethers.Contract(
           address,
           IUniswapV3PoolABI,
@@ -51,6 +77,7 @@ export const provideHandleTransaction = (
             poolContract.token1(),
             poolContract.fee(),
           ]);
+
           // If this address is a Uniswap Pool then it shall be available on getPool() query
           const poolAddress = await factoryContract.getPool(
             token0,
@@ -58,6 +85,11 @@ export const provideHandleTransaction = (
             fee
           );
           if (poolAddress.toLowerCase() === address.toLowerCase()) {
+            poolCache[address] = {
+              token0,
+              token1,
+              fee: fee.toString(),
+            };
             findings.push(
               Finding.fromObject({
                 name: "Uniswap detected a swap transaction",
