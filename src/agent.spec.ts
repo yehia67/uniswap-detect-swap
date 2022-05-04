@@ -4,9 +4,14 @@ import {
   Finding,
   HandleTransaction,
   createTransactionEvent,
-  ethers,
 } from "forta-agent";
-import agent, { provideHandleTransaction } from "./agent";
+
+import agent, {
+  provideHandleTransaction,
+  FACTORY_CONTRACT_ADDRESS,
+} from "./agent";
+
+jest.setTimeout(10000);
 
 describe("Nethermind deployer deploy a new bot", () => {
   let handleTransaction: HandleTransaction;
@@ -17,6 +22,8 @@ describe("Nethermind deployer deploy a new bot", () => {
     const poolAddress = "0x3ed96d54be53868edbc3ad5ccc4995710d187dc4";
     const addresses = { [poolAddress]: true };
     const mockTxEvent = createTransactionEvent(addresses as any);
+
+    handleTransaction = provideHandleTransaction(FACTORY_CONTRACT_ADDRESS);
 
     const findings = await handleTransaction(mockTxEvent);
 
@@ -42,6 +49,8 @@ describe("Nethermind deployer deploy a new bot", () => {
 
     mockTxEvent.filterLog = jest.fn().mockReturnValue([swapTxEvent]);
 
+    handleTransaction = provideHandleTransaction(FACTORY_CONTRACT_ADDRESS);
+
     const findings = await handleTransaction(mockTxEvent);
 
     expect(findings).toStrictEqual([]);
@@ -65,6 +74,8 @@ describe("Nethermind deployer deploy a new bot", () => {
     };
 
     mockTxEvent.filterLog = jest.fn().mockReturnValue([swapTxEvent]);
+
+    handleTransaction = provideHandleTransaction(FACTORY_CONTRACT_ADDRESS);
 
     const findings = await handleTransaction(mockTxEvent);
 
