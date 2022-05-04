@@ -45,6 +45,7 @@ describe("Nethermind deployer deploy a new bot", () => {
         liquidity: 1000,
         tick: 11,
       },
+      address: poolAddress,
     };
 
     mockTxEvent.filterLog = jest.fn().mockReturnValue([swapTxEvent]);
@@ -71,6 +72,7 @@ describe("Nethermind deployer deploy a new bot", () => {
         liquidity: 1000,
         tick: 11,
       },
+      address: poolAddress,
     };
 
     mockTxEvent.filterLog = jest.fn().mockReturnValue([swapTxEvent]);

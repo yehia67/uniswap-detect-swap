@@ -36,51 +36,48 @@ export const provideHandleTransaction = (
       provider
     );
 
-    const { addresses } = txEvent;
-
-    for (const address of Object.keys(addresses)) {
-      // if its the user wallet, skip
-      const code = await provider.getCode(address);
-      if (code === "0x") {
-        continue;
-      }
-
-      const poolContract = new ethers.Contract(
-        address,
-        IUniswapV3PoolABI,
-        provider
-      );
-      // If its not a pool address all queries will throw exception
-      try {
-        const [token0, token1, fee] = await Promise.all([
-          poolContract.token0(),
-          poolContract.token1(),
-          poolContract.fee(),
-        ]);
-
-        // If this address is a Uniswap Pool then it shall be available on getPool() query
-        const poolAddress = await factoryContract.getPool(token0, token1, fee);
-
-        if (poolAddress.length > 0) {
-          findings.push(
-            Finding.fromObject({
-              name: "Uniswap detected a swap transaction",
-              description: `Uniswap detected a swap transaction between ${token0} and ${token1}`,
-              alertId: "SWAP-0",
-              type: FindingType.Info,
-              severity: FindingSeverity.Info,
-              metadata: {
-                token0,
-                token1,
-                fee: fee.toString(),
-              },
-            })
+    await Promise.all(
+      swapEvents.map(async (swapEvent) => {
+        const { address } = swapEvent;
+        const poolContract = new ethers.Contract(
+          address,
+          IUniswapV3PoolABI,
+          provider
+        );
+        // If its not a pool address all queries will throw exception
+        try {
+          const [token0, token1, fee] = await Promise.all([
+            poolContract.token0(),
+            poolContract.token1(),
+            poolContract.fee(),
+          ]);
+          // If this address is a Uniswap Pool then it shall be available on getPool() query
+          const poolAddress = await factoryContract.getPool(
+            token0,
+            token1,
+            fee
           );
+          if (poolAddress.toLowerCase() === address.toLowerCase()) {
+            findings.push(
+              Finding.fromObject({
+                name: "Uniswap detected a swap transaction",
+                description: `Uniswap detected a swap transaction between ${token0} and ${token1}`,
+                alertId: "SWAP-0",
+                type: FindingType.Info,
+                severity: FindingSeverity.Info,
+                metadata: {
+                  token0,
+                  token1,
+                  fee: fee.toString(),
+                },
+              })
+            );
+          }
+        } catch (error) {
+          //ignore
         }
-      } catch (error) {
-        //ignore
-      }
-    }
+      })
+    );
 
     return findings;
   };
