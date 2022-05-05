@@ -27,7 +27,10 @@ interface SwapInfo {
   fee: string;
 }
 
-const poolCache: LRU<string, SwapInfo> = new LRU<string, SwapInfo>({
+const poolCache: LRU<string, SwapInfo | null> = new LRU<
+  string,
+  SwapInfo | null
+>({
   max: 10000,
 });
 
@@ -81,19 +84,20 @@ export const provideHandleTransaction = (
 
         if (poolCache.has(address)) {
           const cachedPool = poolCache.get(address);
+          if (!cachedPool) {
+            return;
+          }
           findings.push(
             Finding.fromObject({
               name: "Uniswap detected a swap transaction",
-              description: `Uniswap detected a swap transaction between ${
-                cachedPool!.token0
-              } and ${cachedPool!.token1}`,
+              description: `Uniswap detected a swap transaction between ${cachedPool.token0} and ${cachedPool.token1}`,
               alertId: "SWAP-0",
               type: FindingType.Info,
               severity: FindingSeverity.Info,
               metadata: {
-                token0: cachedPool!.token0,
-                token1: cachedPool!.token1,
-                fee: cachedPool!.fee,
+                token0: cachedPool.token0,
+                token1: cachedPool.token1,
+                fee: cachedPool.fee,
               },
             })
           );
@@ -140,9 +144,12 @@ export const provideHandleTransaction = (
                 },
               })
             );
+          } else {
+            poolCache.set(address, null);
           }
         } catch (error) {
           //ignore
+          poolCache.set(address, null);
         }
       })
     );
