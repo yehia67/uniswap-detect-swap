@@ -17,6 +17,8 @@ import {
 import agent, {
   provideHandleTransaction,
   FACTORY_CONTRACT_ADDRESS,
+  SWAP_EVENT,
+  COMMON,
 } from "./agent";
 
 jest.setTimeout(10000);
@@ -66,60 +68,53 @@ describe("Nethermind bot detect all swaps", () => {
 
     mockTxEvent.filterLog = jest.fn().mockReturnValue([swapTxEvent]);
 
-    handleTransaction = provideHandleTransaction(
-      FACTORY_CONTRACT_ADDRESS,
-      mockProvider
-    );
-
     const findings = await handleTransaction(mockTxEvent);
 
     expect(findings).toStrictEqual([]);
   });
 
   it("returns a finding if any uniswap pool made a swapping transaction ", async () => {
-    const from = createAddress("0x720");
-    const poolAddress = createAddress("0xf00");
-    const mockTxEvent = new TestTransactionEvent();
+    const poolAddress = "0x3ed96d54be53868edbc3ad5ccc4995710d187dc4";
+    const block = 14717599;
+    const t0 = "0x4d224452801ACEd8B2F0aebE155379bb5D594381";
+    const t1 = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+    const fee = 3000;
+    const abiInterface = new ethers.utils.Interface(COMMON);
+
+    mockProvider.addCallTo(poolAddress, block, abiInterface, "token0", {
+      inputs: [],
+      outputs: [t0],
+    });
+    mockProvider.addCallTo(poolAddress, block, abiInterface, "token1", {
+      inputs: [],
+      outputs: [t1],
+    });
+    mockProvider.addCallTo(poolAddress, block, abiInterface, "fee", {
+      inputs: [],
+      outputs: [fee],
+    });
+
+    const swapEventInterface = new ethers.utils.Interface([
+      SWAP_EVENT,
+    ]).getEvent("Swap");
+
+    const mockTxEvent = new TestTransactionEvent()
+      .setBlock(block)
+      .addInterfaceEventLog(swapEventInterface, poolAddress, [
+        "0x0000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000",
+        ethers.utils.parseEther("1"),
+        ethers.utils.parseEther("2"),
+        1,
+        1000,
+        11,
+      ]);
+
     const mockSigner: MockEthersSigner = new MockEthersSigner(mockProvider);
-    const iface: ethers.utils.Interface = new ethers.utils.Interface([
-      "function swap(address recipient,bool zeroForOne,int256 amountSpecified,uint160 sqrtPriceLimitX96,bytes calldata data)",
-    ]);
-    mockSigner
-      .setAddress(from)
-      .allowTransaction(
-        from,
-        poolAddress,
-        iface,
-        "swap",
-        [
-          poolAddress,
-          true,
-          ethers.utils.parseEther("1"),
-          ethers.utils.parseEther("1"),
-          Buffer.from(""),
-        ],
-        { confirmations: 42 }
-      );
-    const swapTxEvent = {
-      args: {
-        sender: "0x0000000000000000000000000000000000000000",
-        recipient: "0x0000000000000000000000000000000000000000",
-        amount0: 1,
-        amount1: 2,
-        sqrtPriceX96: 1,
-        liquidity: 1000,
-        tick: 11,
-      },
-      address: poolAddress,
-    };
-
-    mockTxEvent.filterLog = jest.fn().mockReturnValue([swapTxEvent]);
-
     handleTransaction = provideHandleTransaction(
       FACTORY_CONTRACT_ADDRESS,
-      mockProvider
+      mockSigner as unknown as MockEthersProvider
     );
-
     const findings = await handleTransaction(mockTxEvent);
 
     expect(findings).toStrictEqual([

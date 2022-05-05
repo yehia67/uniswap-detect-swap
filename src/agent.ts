@@ -10,11 +10,14 @@ import {
 
 import LRU from "lru-cache";
 
-import { abi as IUniswapV3PoolABI } from "@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json";
 import { MockEthersProvider } from "forta-agent-tools/lib/mock.utils";
-
+export const COMMON: string[] = [
+  "function token0() external view returns (address)",
+  "function token1() external view returns (address)",
+  "function fee() external view returns (uint24)",
+];
 export const SWAP_EVENT =
-  "event Swap( address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick )";
+  "event Swap(address indexed sender,address indexed recipient,int256 amount0,int256 amount1,uint160 sqrtPriceX96,uint128 liquidity,int24 tick )";
 
 export const FACTORY_CONTRACT_ADDRESS =
   "0x1f98431c8ad98523631ae4a59f267346ea31f984";
@@ -66,7 +69,7 @@ function getCreate2Address(
 }
 export const provideHandleTransaction = (
   FACTORY_CONTRACT_ADDRESS: string,
-  provider: ethers.providers.Provider | MockEthersProvider
+  provider: ethers.providers.JsonRpcProvider | MockEthersProvider
 ): HandleTransaction => {
   const handleTransaction: HandleTransaction = async (
     txEvent: TransactionEvent
@@ -106,15 +109,22 @@ export const provideHandleTransaction = (
 
         const poolContract = new ethers.Contract(
           address,
-          IUniswapV3PoolABI,
-          provider as ethers.providers.Provider
+          COMMON,
+          provider as ethers.providers.JsonRpcProvider
         );
         // If its not a pool address all queries will throw exception
         try {
+          console.log("114");
           const [token0, token1, fee] = await Promise.all([
-            poolContract.token0(),
-            poolContract.token1(),
-            poolContract.fee(),
+            poolContract.callStatic.token0({
+              blockTag: 14717599,
+              gasLimit: 100,
+            }),
+            poolContract.callStatic.token1({
+              blockTag: 14717599,
+              gasLimit: 100,
+            }),
+            poolContract.callStatic.fee({ blockTag: 14717599, gasLimit: 100 }),
           ]);
 
           const computedAddress = getCreate2Address(
@@ -150,6 +160,7 @@ export const provideHandleTransaction = (
         } catch (error) {
           //ignore
           poolCache.set(address, null);
+          console.error(error);
         }
       })
     );
