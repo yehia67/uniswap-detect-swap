@@ -8,6 +8,8 @@ import {
   getJsonRpcUrl,
 } from "forta-agent";
 
+import LRU from "lru-cache";
+
 import { abi as IUniswapV3PoolABI } from "@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json";
 import { MockEthersProvider } from "forta-agent-tools/lib/mock.utils";
 
@@ -24,7 +26,10 @@ interface SwapInfo {
   token1: string;
   fee: string;
 }
-const poolCache: Record<string, SwapInfo> = {};
+
+const poolCache: LRU<string, SwapInfo> = new LRU<string, SwapInfo>({
+  max: 10000,
+});
 
 const provider = new ethers.providers.JsonRpcProvider(getJsonRpcUrl());
 
@@ -74,18 +79,21 @@ export const provideHandleTransaction = (
       swapEvents.map(async (swapEvent) => {
         const { address } = swapEvent;
 
-        if (poolCache[address]) {
+        if (poolCache.has(address)) {
+          const cachedPool = poolCache.get(address);
           findings.push(
             Finding.fromObject({
               name: "Uniswap detected a swap transaction",
-              description: `Uniswap detected a swap transaction between ${poolCache[address].token0} and ${poolCache[address].token1}`,
+              description: `Uniswap detected a swap transaction between ${
+                cachedPool!.token0
+              } and ${cachedPool!.token1}`,
               alertId: "SWAP-0",
               type: FindingType.Info,
               severity: FindingSeverity.Info,
               metadata: {
-                token0: poolCache[address].token0,
-                token1: poolCache[address].token1,
-                fee: poolCache[address].fee,
+                token0: cachedPool!.token0,
+                token1: cachedPool!.token1,
+                fee: cachedPool!.fee,
               },
             })
           );
@@ -113,11 +121,11 @@ export const provideHandleTransaction = (
           );
 
           if (computedAddress.toLowerCase() === address) {
-            poolCache[address] = {
+            poolCache.set(address, {
               token0,
               token1,
               fee: fee.toString(),
-            };
+            });
             findings.push(
               Finding.fromObject({
                 name: "Uniswap detected a swap transaction",
