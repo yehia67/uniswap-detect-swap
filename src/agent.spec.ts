@@ -1,4 +1,6 @@
+import { abi } from "@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json";
 import {
+  createAddress,
   MockEthersProvider,
   TestTransactionEvent,
 } from "forta-agent-tools/lib/tests";
@@ -72,12 +74,12 @@ describe("Nethermind bot detect all swaps", () => {
   });
 
   it("returns a finding if any uniswap pool made a swapping transaction ", async () => {
-    const poolAddress = "0x3ed96d54be53868edbc3ad5ccc4995710d187dc4";
+    const poolAddress = createAddress("0xaaaaa");
     const block = 14717599;
-    const t0 = "0x4d224452801ACEd8B2F0aebE155379bb5D594381";
-    const t1 = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+    const t0 = createAddress("0xe0a");
+    const t1 = createAddress("0xdef1");
     const fee = 3000;
-    const abiInterface = new ethers.utils.Interface(COMMON);
+    const abiInterface = new ethers.utils.Interface(abi);
 
     mockProvider.addCallTo(poolAddress, block, abiInterface, "token0", {
       inputs: [],

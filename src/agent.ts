@@ -47,7 +47,6 @@ function getCreate2Address(
   fee: number,
   bytecode: string
 ): string {
-  console.log({ tokenA, tokenB });
   const [token0, token1] =
     tokenA.toLowerCase() < tokenB.toLowerCase()
       ? [tokenA, tokenB]
@@ -117,15 +116,9 @@ export const provideHandleTransaction = (
         // If its not a pool address all queries will throw exception
         try {
           const [token0, token1, fee] = await Promise.all([
-            poolContract.callStatic.token0({
-              blockTag: 14717599,
-              gasLimit: 100,
-            }),
-            poolContract.callStatic.token1({
-              blockTag: 14717599,
-              gasLimit: 100,
-            }),
-            poolContract.callStatic.fee({ blockTag: 14717599, gasLimit: 100 }),
+            poolContract.callStatic.token0(),
+            poolContract.callStatic.token1(),
+            poolContract.callStatic.fee(),
           ]);
 
           const computedAddress = getCreate2Address(
