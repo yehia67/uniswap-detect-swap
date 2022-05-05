@@ -4,12 +4,14 @@ import {
   MockEthersSigner,
   TestTransactionEvent,
 } from "forta-agent-tools/lib/tests";
+
 import {
   FindingType,
   FindingSeverity,
   Finding,
   HandleTransaction,
   createTransactionEvent,
+  ethers,
 } from "forta-agent";
 
 import agent, {
@@ -22,11 +24,13 @@ jest.setTimeout(10000);
 describe("Nethermind bot detect all swaps", () => {
   let handleTransaction: HandleTransaction;
   const mockProvider: MockEthersProvider = new MockEthersProvider();
-  //const mockSigner: MockEthersSigner = new MockEthersProvider();
 
   beforeAll(() => {
     handleTransaction = agent.handleTransaction;
   });
+
+  beforeEach(() => mockProvider.clear());
+
   it("no finding if swap transaction didn't emit ", async () => {
     const poolAddress = "0x3ed96d54be53868edbc3ad5ccc4995710d187dc4";
     const addresses = { [poolAddress]: true };
@@ -73,10 +77,29 @@ describe("Nethermind bot detect all swaps", () => {
   });
 
   it("returns a finding if any uniswap pool made a swapping transaction ", async () => {
-    const poolAddress = "0x3ed96d54be53868edbc3ad5ccc4995710d187dc4";
-    const addresses = { [poolAddress]: true };
-    const mockTxEvent = createTransactionEvent({ addresses } as any);
-
+    const from = createAddress("0x720");
+    const poolAddress = createAddress("0xf00");
+    const mockTxEvent = new TestTransactionEvent();
+    const mockSigner: MockEthersSigner = new MockEthersSigner(mockProvider);
+    const iface: ethers.utils.Interface = new ethers.utils.Interface([
+      "function swap(address recipient,bool zeroForOne,int256 amountSpecified,uint160 sqrtPriceLimitX96,bytes calldata data)",
+    ]);
+    mockSigner
+      .setAddress(from)
+      .allowTransaction(
+        from,
+        poolAddress,
+        iface,
+        "swap",
+        [
+          poolAddress,
+          true,
+          ethers.utils.parseEther("1"),
+          ethers.utils.parseEther("1"),
+          Buffer.from(""),
+        ],
+        { confirmations: 42 }
+      );
     const swapTxEvent = {
       args: {
         sender: "0x0000000000000000000000000000000000000000",
