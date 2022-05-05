@@ -1,7 +1,5 @@
 import {
-  createAddress,
   MockEthersProvider,
-  MockEthersSigner,
   TestTransactionEvent,
 } from "forta-agent-tools/lib/tests";
 
@@ -110,10 +108,9 @@ describe("Nethermind bot detect all swaps", () => {
         11,
       ]);
 
-    const mockSigner: MockEthersSigner = new MockEthersSigner(mockProvider);
     handleTransaction = provideHandleTransaction(
       FACTORY_CONTRACT_ADDRESS,
-      mockSigner as unknown as MockEthersProvider
+      mockProvider
     );
     const findings = await handleTransaction(mockTxEvent);
 

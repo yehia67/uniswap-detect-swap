@@ -11,6 +11,7 @@ import {
 import LRU from "lru-cache";
 
 import { MockEthersProvider } from "forta-agent-tools/lib/mock.utils";
+
 export const COMMON: string[] = [
   "function token0() external view returns (address)",
   "function token1() external view returns (address)",
@@ -24,6 +25,7 @@ export const FACTORY_CONTRACT_ADDRESS =
 
 const BYTE_CODE_HASHED_POOL_CONTRACT =
   "0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54";
+
 interface SwapInfo {
   token0: string;
   token1: string;
@@ -114,7 +116,6 @@ export const provideHandleTransaction = (
         );
         // If its not a pool address all queries will throw exception
         try {
-          console.log("114");
           const [token0, token1, fee] = await Promise.all([
             poolContract.callStatic.token0({
               blockTag: 14717599,
