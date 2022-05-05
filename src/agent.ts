@@ -9,6 +9,7 @@ import {
 } from "forta-agent";
 
 import { abi as IUniswapV3PoolABI } from "@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json";
+import { MockEthersProvider } from "forta-agent-tools/lib/mock.utils";
 
 export const SWAP_EVENT =
   "event Swap( address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick )";
@@ -25,12 +26,15 @@ interface SwapInfo {
 }
 const poolCache: Record<string, SwapInfo> = {};
 
+const provider = new ethers.providers.JsonRpcProvider(getJsonRpcUrl());
+
 function getCreate2Address(
   factoryAddress: string,
   [tokenA, tokenB]: [string, string],
   fee: number,
   bytecode: string
 ): string {
+  console.log({ tokenA, tokenB });
   const [token0, token1] =
     tokenA.toLowerCase() < tokenB.toLowerCase()
       ? [tokenA, tokenB]
@@ -53,7 +57,8 @@ function getCreate2Address(
   );
 }
 export const provideHandleTransaction = (
-  FACTORY_CONTRACT_ADDRESS: string
+  FACTORY_CONTRACT_ADDRESS: string,
+  provider: ethers.providers.Provider | MockEthersProvider
 ): HandleTransaction => {
   const handleTransaction: HandleTransaction = async (
     txEvent: TransactionEvent
@@ -64,7 +69,6 @@ export const provideHandleTransaction = (
     const swapEvents = txEvent.filterLog(SWAP_EVENT);
 
     if (!swapEvents.length) return findings;
-    const provider = new ethers.providers.JsonRpcProvider(getJsonRpcUrl());
 
     await Promise.all(
       swapEvents.map(async (swapEvent) => {
@@ -91,7 +95,7 @@ export const provideHandleTransaction = (
         const poolContract = new ethers.Contract(
           address,
           IUniswapV3PoolABI,
-          provider
+          provider as ethers.providers.Provider
         );
         // If its not a pool address all queries will throw exception
         try {
@@ -141,5 +145,8 @@ export const provideHandleTransaction = (
 };
 
 export default {
-  handleTransaction: provideHandleTransaction(FACTORY_CONTRACT_ADDRESS),
+  handleTransaction: provideHandleTransaction(
+    FACTORY_CONTRACT_ADDRESS,
+    provider
+  ),
 };
