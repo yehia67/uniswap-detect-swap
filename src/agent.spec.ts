@@ -1,4 +1,10 @@
 import {
+  createAddress,
+  MockEthersProvider,
+  MockEthersSigner,
+  TestTransactionEvent,
+} from "forta-agent-tools/lib/tests";
+import {
   FindingType,
   FindingSeverity,
   Finding,
@@ -15,6 +21,9 @@ jest.setTimeout(10000);
 
 describe("Nethermind bot detect all swaps", () => {
   let handleTransaction: HandleTransaction;
+  const mockProvider: MockEthersProvider = new MockEthersProvider();
+  //const mockSigner: MockEthersSigner = new MockEthersProvider();
+
   beforeAll(() => {
     handleTransaction = agent.handleTransaction;
   });
@@ -23,7 +32,10 @@ describe("Nethermind bot detect all swaps", () => {
     const addresses = { [poolAddress]: true };
     const mockTxEvent = createTransactionEvent(addresses as any);
 
-    handleTransaction = provideHandleTransaction(FACTORY_CONTRACT_ADDRESS);
+    handleTransaction = provideHandleTransaction(
+      FACTORY_CONTRACT_ADDRESS,
+      mockProvider
+    );
 
     const findings = await handleTransaction(mockTxEvent);
 
@@ -50,7 +62,10 @@ describe("Nethermind bot detect all swaps", () => {
 
     mockTxEvent.filterLog = jest.fn().mockReturnValue([swapTxEvent]);
 
-    handleTransaction = provideHandleTransaction(FACTORY_CONTRACT_ADDRESS);
+    handleTransaction = provideHandleTransaction(
+      FACTORY_CONTRACT_ADDRESS,
+      mockProvider
+    );
 
     const findings = await handleTransaction(mockTxEvent);
 
@@ -77,7 +92,10 @@ describe("Nethermind bot detect all swaps", () => {
 
     mockTxEvent.filterLog = jest.fn().mockReturnValue([swapTxEvent]);
 
-    handleTransaction = provideHandleTransaction(FACTORY_CONTRACT_ADDRESS);
+    handleTransaction = provideHandleTransaction(
+      FACTORY_CONTRACT_ADDRESS,
+      mockProvider
+    );
 
     const findings = await handleTransaction(mockTxEvent);
 
