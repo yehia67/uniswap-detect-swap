@@ -1,3 +1,4 @@
+import { abi } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json';
 import {
   Finding,
   HandleTransaction,
@@ -5,18 +6,14 @@ import {
   FindingSeverity,
   FindingType,
   ethers,
-  getJsonRpcUrl,
+  getEthersProvider,
 } from "forta-agent";
 
 import LRU from "lru-cache";
 
 import { MockEthersProvider } from "forta-agent-tools/lib/mock.utils";
+const provider = getEthersProvider();
 
-export const COMMON: string[] = [
-  "function token0() external view returns (address)",
-  "function token1() external view returns (address)",
-  "function fee() external view returns (uint24)",
-];
 export const SWAP_EVENT =
   "event Swap(address indexed sender,address indexed recipient,int256 amount0,int256 amount1,uint160 sqrtPriceX96,uint128 liquidity,int24 tick )";
 
@@ -38,8 +35,6 @@ const poolCache: LRU<string, SwapInfo | null> = new LRU<
 >({
   max: 10000,
 });
-
-const provider = new ethers.providers.JsonRpcProvider(getJsonRpcUrl());
 
 function getCreate2Address(
   factoryAddress: string,
@@ -110,15 +105,15 @@ export const provideHandleTransaction = (
 
         const poolContract = new ethers.Contract(
           address,
-          COMMON,
-          provider as ethers.providers.JsonRpcProvider
+          abi,
+          provider as any
         );
         // If its not a pool address all queries will throw exception
         try {
           const [token0, token1, fee] = await Promise.all([
-            poolContract.callStatic.token0(),
-            poolContract.callStatic.token1(),
-            poolContract.callStatic.fee(),
+            poolContract.token0({ blockTag: txEvent.blockNumber }),
+            poolContract.token1({ blockTag: txEvent.blockNumber}),
+            poolContract.fee({ blockTag: txEvent.blockNumber }),
           ]);
 
           const computedAddress = getCreate2Address(
@@ -129,6 +124,7 @@ export const provideHandleTransaction = (
           );
 
           if (computedAddress.toLowerCase() === address) {
+            console.log({ provider });
             poolCache.set(address, {
               token0,
               token1,
@@ -154,7 +150,7 @@ export const provideHandleTransaction = (
         } catch (error) {
           //ignore
           poolCache.set(address, null);
-          console.error(error);
+          console.log({ error });
         }
       })
     );
