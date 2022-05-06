@@ -1,4 +1,4 @@
-import { abi } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json';
+import { abi } from "@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json";
 import {
   Finding,
   HandleTransaction,
@@ -20,7 +20,7 @@ export const SWAP_EVENT =
 export const FACTORY_CONTRACT_ADDRESS =
   "0x1f98431c8ad98523631ae4a59f267346ea31f984";
 
-const BYTE_CODE_HASHED_POOL_CONTRACT =
+export const BYTE_CODE_HASHED_POOL_CONTRACT =
   "0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54";
 
 interface SwapInfo {
@@ -36,12 +36,12 @@ const poolCache: LRU<string, SwapInfo | null> = new LRU<
   max: 10000,
 });
 
-function getCreate2Address(
+export const getCreate2Address = (
   factoryAddress: string,
   [tokenA, tokenB]: [string, string],
   fee: number,
   bytecode: string
-): string {
+): string => {
   const [token0, token1] =
     tokenA.toLowerCase() < tokenB.toLowerCase()
       ? [tokenA, tokenB]
@@ -62,7 +62,7 @@ function getCreate2Address(
   return ethers.utils.getAddress(
     `0x${ethers.utils.keccak256(sanitizedInputs).slice(-40)}`
   );
-}
+};
 export const provideHandleTransaction = (
   FACTORY_CONTRACT_ADDRESS: string,
   provider: ethers.providers.JsonRpcProvider | MockEthersProvider
@@ -103,16 +103,12 @@ export const provideHandleTransaction = (
           return;
         }
 
-        const poolContract = new ethers.Contract(
-          address,
-          abi,
-          provider as any
-        );
+        const poolContract = new ethers.Contract(address, abi, provider as any);
         // If its not a pool address all queries will throw exception
         try {
           const [token0, token1, fee] = await Promise.all([
             poolContract.token0({ blockTag: txEvent.blockNumber }),
-            poolContract.token1({ blockTag: txEvent.blockNumber}),
+            poolContract.token1({ blockTag: txEvent.blockNumber }),
             poolContract.fee({ blockTag: txEvent.blockNumber }),
           ]);
 
